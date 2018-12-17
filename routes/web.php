@@ -14,3 +14,7 @@
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Reigstration routes
+Route::get('/register', 'Auth\RegisterController@register')->name('register');
+Route::get('/login', 'Auth\LoginController@login')->name('login');

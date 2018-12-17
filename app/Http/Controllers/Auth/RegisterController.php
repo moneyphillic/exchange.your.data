@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\Consumer;
+use App\Models\User;
 use App\Models\UserType;
-use App\User;
+use App\UserDefault;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
-use Illuminate\View\View;
 
 class RegisterController extends Controller
 {
@@ -63,14 +64,86 @@ class RegisterController extends Controller
      * Create a new user instance after a valid registration.
      *
      * @param  array  $data
-     * @return \App\User
+     * @return \App\UserDefault
      */
     protected function create(array $data)
     {
-        return User::create([
+        return UserDefault::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
+    }
+
+    /**
+     * Registration process method
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function register(Request $request): JsonResponse
+    {
+        $parameters = $request->all();
+
+        if (!$parameters) {
+            return new JsonResponse([
+                'error' => 'ERROR! There are no passed parameters.',
+                'code' => 417,
+            ]);
+        }
+
+        // Get user types to check with existing types
+        $userTypes = UserType::all();
+        if (!$userTypes->contains($parameters['user_type'])) {
+            return new JsonResponse([
+                'error' => 'ERROR! There are no such type of users.',
+                'code' => 417,
+            ]);
+        }
+
+        $userType = $parameters['user_type'];
+        $userNameExist = $this->isUsernameExist($userType, $parameters['username']);
+
+        // All types of user has same fields in database
+        if (1 == $userType && !$userNameExist) {
+            $newUser = new User;
+        } else if (2 == $userType && !$userNameExist) {
+            $newUser = new Consumer;
+        } else {
+            return new JsonResponse([
+                'error' => 'ERROR! Already has a user with that username or usertype is not found.',
+                'code' => 417,
+            ]);
+        }
+
+        $newUser->username = $parameters['username'];
+        $newUser->password = $parameters['password'];
+        $newUser->user_type = $userType;
+        $newUser->save();
+
+        return new JsonResponse([
+            'message' => 'Registration is passed successful.',
+            'code' => 200,
+        ]);
+    }
+
+    /**
+     * Get user_type and username and checks for username existance
+     *
+     * @param int $userType
+     * @return bool
+     */
+    public function isUsernameExist(int $userType, string $username): ?bool
+    {
+        switch ($userType) {
+            case 1:
+                $user = new User;
+                break;
+            case 2:
+                $user = new Consumer;
+                break;
+        }
+
+        return is_object($user->where('username', $username)->first());
     }
 }
