@@ -61,21 +61,6 @@ class RegisterController extends Controller
     }
 
     /**
-     * Create a new user instance after a valid registration.
-     *
-     * @param  array  $data
-     * @return \App\UserDefault
-     */
-    protected function create(array $data)
-    {
-        return UserDefault::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
-    }
-
-    /**
      * Registration process method
      *
      * @param Request $request
@@ -117,7 +102,7 @@ class RegisterController extends Controller
         }
 
         $newUser->username = $parameters['username'];
-        $newUser->password = $parameters['password'];
+        $newUser->password = hash('sha256', $parameters['password']);
         $newUser->user_type = $userType;
         $newUser->save();
 
